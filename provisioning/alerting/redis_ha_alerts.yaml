@@ -1,0 +1,213 @@
+apiVersion: 1
+
+groups:
+  - name: Master-Slave
+    folder: Redis Failover
+    interval: 1m
+    rules:
+      # --- Alert 1: Replication Lag ---
+      - uid: 'ff4fdi0ze4ruoc'
+        title: 'Replication Lag'
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            datasourceUid: 'prometheus'
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              # FIXED: Removed broken instance label
+              expr: 'redis_replication_lag_seconds > 5'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: '__expr__'
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              type: 'threshold'
+              expression: 'A'
+              conditions:
+                - evaluator:
+                    params: [0] # This looks for > 0 results from the query
+                    type: 'gt'
+                  operator:
+                    type: 'and'
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: 'last'
+                  type: 'query'
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          description: 'Detects sync isses pre-failover'
+          summary: 'High replication lag on {{$labels.instance}}--potential failover imminent'
+
+      # --- Alert 2: Failover Detected ---
+      - uid: 'df4fdxwco04qoa'
+        title: 'Failover Detected'
+        condition: C
+        for: 1m
+        data:
+          - refId: A
+            datasourceUid: 'prometheus'
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              expr: 'changes(sentinel_master_changed_total[5m]) > 0 or sentinel_failover_in_progress > 0'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: '__expr__'
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              type: 'threshold'
+              expression: 'A'
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: 'gt'
+                  operator:
+                    type: 'and'
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: 'last'
+                  type: 'query'
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          description: 'Redis failover detected--check master status'
+          summary: 'sentinel_failover_in_progress or master change'
+
+      # --- Alert 3: Quorum Loss ---
+      - uid: 'df4fe72eqi5tsf'
+        title: 'Quorum Loss'
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            datasourceUid: 'prometheus'
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              expr: 'redis_sentinel_running_sentinels < 3'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: '__expr__'
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              type: 'threshold'
+              expression: 'A'
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: 'gt'
+                  operator:
+                    type: 'and'
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: 'last'
+                  type: 'query'
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          description: 'Sentinel quorum lost--only {{$value}} sentinels up'
+          summary: 'sentinels down, risking failed failover'
+
+      # --- Alert 5: Post-Failover Lag ---
+      - uid: 'post_failover_lag'
+        title: 'Post-Failover Lag'
+        condition: C
+        for: 5m
+        data:
+          - refId: A
+            datasourceUid: 'prometheus'
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              # FIXED: Removed broken instance label
+              expr: 'redis_replication_lag_seconds > 10'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: '__expr__'
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              type: 'threshold'
+              expression: 'A'
+              conditions:
+                - evaluator:
+                    params: [0] # This looks for > 0 results from the query
+                    type: 'gt'
+                  operator:
+                    type: 'and'
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: 'last'
+                  type: 'query'
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          description: 'High lag after failover on {{ $labels.instance }}—check replication status'
+          summary: 'Post-failover replication lag detected'
+
+      # --- Alert 6: Failed Promotion ---
+      - uid: 'failed_promotion'
+        title: 'Failed Promotion'
+        condition: C
+        for: 2m
+        data:
+          - refId: A
+            datasourceUid: 'prometheus'
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              expr: 'sentinel_failover_in_progress > 0 and changes(sentinel_master_changed_total[2m]) == 0'
+              instant: true
+              refId: A
+          - refId: C
+            datasourceUid: '__expr__'
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              type: 'threshold'
+              expression: 'A'
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: 'gt'
+                  operator:
+                    type: 'and'
+                  query:
+                    params: [C]
+                  reducer:
+                    params: []
+                    type: 'last'
+                  type: 'query'
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          description: 'Failover in progress but no master change—promotion may have failed'
+          summary: 'Failed slave promotion detected'
