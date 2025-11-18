@@ -1,6 +1,18 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+
+# Secrets
 .env
+
+# Generated Configs
+prometheus/prometheus.yml
+configs/grafana.ini
+
+# Local Data
+volumes/
+
+# OS files
 .DS_Store
-Thumbs.db   
+Thumbs.db

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    # This UID is used by all our alert rules.
+    uid: prometheus
+    access: proxy
+    url: http://localhost:9090
+    isDefault: true
+    editable: false # Set to false so it can't be changed in the UI
