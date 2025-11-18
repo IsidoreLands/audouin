@@ -1,0 +1,28 @@
+name: CI Checks
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Lint docker-compose.yml
+        run: |
+          # This command just checks if the file is valid.
+          # It uses the --env-file flag to load a dummy .env so it doesn't fail on missing variables.
+          touch .env
+          docker compose --env-file .env config -q
+
+      - name: Lint Shell Scripts with ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          files: |
+            ./setup.sh
+            ./grafana-alerts.sh
