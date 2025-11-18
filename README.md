@@ -1,5 +1,7 @@
 # Audouin: A Redis HA Monitoring Stack
 
+Monitoring a Redis HA cluster with Sentinel is complex. You need to track failovers, replication lag, quorum loss, and exporter health. audouin provides a complete, production-ready solution in a single docker compose up command. It is pre-configured with a secure setup wizard and a full set of alerts, so you can go from zero to a fully-monitored cluster in under 5 minutes.
+
 Audouin is a complete, containerized monitoring stack for a Redis High-Availability (HA) cluster. It uses Prometheus, Grafana, and `redis_exporter` to provide metrics, dashboards, and automated alerting for a Redis Sentinel-managed failover environment.
 
 This project is pre-configured to be:
